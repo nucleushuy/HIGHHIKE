@@ -4,7 +4,7 @@ import pandas as pd
 import ast
 
 db_path = "users_trails_schema.db"
-csv = "cleaned_ca_trails.csv"
+csv = "cleaned_trails/cleaned_ca_trails.csv"
 engine = create_engine('sqlite:///%s' % db_path)
 Base = declarative_base()
 
@@ -15,7 +15,7 @@ class Trail(Base):
     difficulty_rating = Column(Integer)
     route_type = Column(String)
     visitor_usage = Column(Integer)
-    avg_rating = Column(Integer)
+    avg_rating = Column(Double)
     area_name = Column(String)
     city_name = Column(String)
     features = Column(PickleType)
@@ -80,11 +80,11 @@ try:
     session.commit()
 
 except FileNotFoundError as ex:
-    print("Check file: " + ex)
+    print("Check file: " + str(ex))
 except KeyError as ex:
-    print("Check rows and column names: " + ex)
+    print("Check rows and column names: " + str(ex))
 except Exception as ex:
-    print("Error: " + ex)
+    print("Error: " + str(ex))
 
 finally:
     session.close()

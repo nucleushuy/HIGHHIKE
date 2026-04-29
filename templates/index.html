@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Highhike</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=VT323&family=Space+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --yellow: #ffd800;
+        --black: #111111;
+        --cyan: #00f0ff;
+        --shadow: 4px 4px 0 var(--black);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--yellow);
+        color: var(--black);
+        font-family: "Space Mono", monospace;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 28px 6vw 10px;
+        gap: 20px;
+      }
+
+      .logo {
+        font-family: "VT323", monospace;
+        font-size: 32px;
+        letter-spacing: 1px;
+        font-weight: 700;
+        text-transform: lowercase;
+      }
+
+      nav {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      nav a {
+        font-size: 14px;
+        border-bottom: 2px solid transparent;
+        padding-bottom: 2px;
+      }
+
+      nav a:hover {
+        border-color: var(--black);
+      }
+
+      .dev-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 14px;
+      }
+
+      .rule {
+        height: 2px;
+        background: var(--black);
+        width: 88%;
+        margin: 6px auto 0;
+      }
+
+      .pixel-icon {
+        width: 18px;
+        height: 18px;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        gap: 2px;
+      }
+
+      .pixel-icon span {
+        background: var(--black);
+      }
+
+      main {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 60px;
+        padding: 60px 6vw 40px;
+        align-items: center;
+        position: relative;
+      }
+
+      .hero h1 {
+        font-family: "VT323", monospace;
+        font-size: clamp(40px, 5vw, 72px);
+        line-height: 1.05;
+        margin: 0 0 20px;
+      }
+
+      .hero p {
+        max-width: 480px;
+        font-size: 16px;
+        line-height: 1.6;
+        margin: 0 0 28px;
+      }
+
+      .highlight {
+        background: var(--cyan);
+        padding: 0 6px;
+      }
+
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .btn {
+        padding: 12px 18px;
+        border: 2px solid var(--black);
+        background: transparent;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 1px;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+      }
+
+      .btn:hover {
+        transform: translate(2px, 2px);
+        box-shadow: 2px 2px 0 var(--black);
+      }
+
+      .results {
+        padding: 10px 6vw 40px;
+      }
+
+      .results-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .results-header h2 {
+        margin: 0;
+        font-family: "VT323", monospace;
+        font-size: 32px;
+      }
+
+      .results-header input {
+        padding: 10px 14px;
+        border: 2px solid var(--black);
+        background: #fff8b0;
+        font-family: inherit;
+        min-width: 220px;
+        box-shadow: var(--shadow);
+      }
+
+      .trail-grid {
+        margin-top: 20px;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+
+      .trail-card {
+        border: 2px solid var(--black);
+        background: #fff6a0;
+        padding: 16px;
+        box-shadow: var(--shadow);
+      }
+
+      .trail-card h3 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+
+      .trail-card button {
+        margin-top: 12px;
+        width: 100%;
+      }
+
+      .trail-card p {
+        margin: 4px 0;
+        font-size: 13px;
+      }
+
+      .trail-tags {
+        margin-top: 10px;
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      .trail-tags span {
+        border: 2px solid var(--black);
+        padding: 2px 6px;
+        font-size: 11px;
+        background: var(--cyan);
+      }
+
+      .drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(17, 17, 17, 0.55);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+        z-index: 20;
+      }
+
+      .drawer-overlay.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: min(420px, 92vw);
+        background: #fff6a0;
+        border-left: 3px solid var(--black);
+        box-shadow: -6px 0 0 var(--black);
+        transform: translateX(110%);
+        transition: transform 0.25s ease;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .drawer.active {
+        transform: translateX(0);
+      }
+
+      .drawer-header {
+        padding: 18px;
+        border-bottom: 2px solid var(--black);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .drawer-header h3 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .drawer-close {
+        border: 2px solid var(--black);
+        background: transparent;
+        padding: 6px 10px;
+        font-weight: 700;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+      }
+
+      .drawer-body {
+        padding: 16px 18px;
+        overflow-y: auto;
+        display: grid;
+        gap: 12px;
+      }
+
+      .drawer-body p {
+        margin: 0;
+        font-size: 13px;
+      }
+
+      .drawer-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .drawer-tags span {
+        border: 2px solid var(--black);
+        padding: 2px 6px;
+        font-size: 11px;
+        background: var(--cyan);
+      }
+
+      .drawer-actions {
+        padding: 16px 18px 24px;
+        border-top: 2px solid var(--black);
+        display: grid;
+        gap: 10px;
+      }
+
+      .drawer-actions button,
+      .drawer-actions a {
+        text-align: center;
+      }
+
+      .status-text {
+        font-size: 12px;
+        color: var(--black);
+      }
+
+      .visuals {
+        position: relative;
+        min-height: 320px;
+        display: grid;
+        gap: 24px;
+        align-content: start;
+      }
+
+      .mission-box {
+        display: inline-block;
+        padding: 14px 18px;
+        border: 2px solid var(--black);
+        box-shadow: var(--shadow);
+        font-family: "VT323", monospace;
+        font-size: 20px;
+        position: relative;
+      }
+
+      .mission-box::before,
+      .mission-box::after {
+        content: "[";
+        position: absolute;
+        left: -18px;
+        top: 8px;
+        font-size: 22px;
+      }
+
+      .mission-box::after {
+        content: "]";
+        left: auto;
+        right: -18px;
+      }
+
+      .rocket {
+        width: 200px;
+        height: 200px;
+        position: relative;
+        border: 2px solid var(--black);
+        box-shadow: var(--shadow);
+        background: #fff6a0;
+        display: grid;
+        place-items: center;
+      }
+
+      .rocket::before {
+        content: "";
+        width: 80px;
+        height: 120px;
+        background: var(--black);
+        clip-path: polygon(50% 0, 100% 40%, 100% 100%, 0 100%, 0 40%);
+      }
+
+      .rocket::after {
+        content: "";
+        position: absolute;
+        bottom: -18px;
+        width: 40px;
+        height: 18px;
+        background: var(--cyan);
+        border: 2px solid var(--black);
+      }
+
+      .pixel-dot {
+        position: absolute;
+        left: 54%;
+        top: 44%;
+        width: 10px;
+        height: 10px;
+        background: var(--black);
+      }
+
+      .pixels {
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        display: grid;
+        grid-template-columns: repeat(4, 12px);
+        grid-template-rows: repeat(4, 12px);
+        gap: 6px;
+      }
+
+      .pixels span {
+        background: var(--black);
+      }
+
+      footer {
+        padding: 14px 6vw 24px;
+        font-family: "VT323", monospace;
+        letter-spacing: 2px;
+        font-size: 18px;
+        text-align: right;
+      }
+
+      @media (max-width: 900px) {
+        header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        main {
+          grid-template-columns: 1fr;
+          padding-top: 40px;
+        }
+
+        .visuals {
+          order: -1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div class="logo">highhike</div>
+        <nav>
+          <a href="#">Trails</a>
+          <a href="#">Create Route</a>
+          <a href="#">Achievements</a>
+          <a href="#">About</a>
+          <a href="#">Blog</a>
+        </nav>
+        <div class="dev-link">
+          <a href="#">Developers</a>
+          <div class="pixel-icon" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </header>
+      <div class="rule" aria-hidden="true"></div>
+
+      <main>
+        <section class="hero">
+          <h1>
+            Make trail <span class="highlight">discovery</span> and planning accessible — for
+            everyone.
+          </h1>
+          <p>
+            <span class="highlight">Search</span> and filter thousands of California trails, then
+            add your own routes with distance and elevation to get a difficulty estimate you can
+            confirm. Highhike keeps the data clean, fast, and open so every hiker can find the
+            right path.
+          </p>
+          <div class="actions">
+            <a class="btn" href="#trails">Explore Trails</a>
+          </div>
+        </section>
+
+        <section class="visuals">
+          <div class="rocket" aria-hidden="true"></div>
+        </section>
+        <div class="pixel-dot" aria-hidden="true"></div>
+      </main>
+
+      <section class="results" id="trails">
+        <div class="results-header">
+          <h2>Trail results</h2>
+          <input id="trail-search" type="search" placeholder="Search trails" />
+        </div>
+        <div id="trail-grid" class="trail-grid"></div>
+      </section>
+
+      <footer>OPEN SOURCE</footer>
+    </div>
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="drawer" id="drawer">
+      <div class="drawer-header">
+        <h3 id="drawer-title">Trail details</h3>
+        <button class="drawer-close" id="drawer-close">Close</button>
+      </div>
+      <div class="drawer-body" id="drawer-body"></div>
+      <div class="drawer-actions">
+        <button class="btn" id="complete-trail">Mark Complete</button>
+        <a class="btn" id="drawer-link" href="#" target="_blank" rel="noopener">Open Link</a>
+        <div class="status-text" id="drawer-status"></div>
+      </div>
+    </aside>
+    <script>
+      const grid = document.getElementById("trail-grid");
+      const searchInput = document.getElementById("trail-search");
+      const drawer = document.getElementById("drawer");
+      const drawerOverlay = document.getElementById("drawer-overlay");
+      const drawerClose = document.getElementById("drawer-close");
+      const drawerTitle = document.getElementById("drawer-title");
+      const drawerBody = document.getElementById("drawer-body");
+      const drawerLink = document.getElementById("drawer-link");
+      const drawerStatus = document.getElementById("drawer-status");
+      const completeTrailButton = document.getElementById("complete-trail");
+      let activeTrailId = null;
+
+      function cardTemplate(trail) {
+        const tags = (trail.features || []).slice(0, 4);
+        return `
+          <article class="trail-card">
+            <h3>${trail.name}</h3>
+            <p>${trail.city_name || "Unknown city"} • ${trail.area_name || "Unknown area"}</p>
+            <p>${trail.difficulty_category || "unknown"} • ${trail.length_miles || "?"} mi • ${trail.elevation_gain_ft || "?"} ft</p>
+            <p>Rating: ${trail.avg_rating ? trail.avg_rating.toFixed(1) : "n/a"}</p>
+            <div class="trail-tags">
+              ${tags.map((tag) => `<span>${tag}</span>`).join("")}
+            </div>
+            <button class="btn" onclick="openDrawer(${trail.id})">View details</button>
+          </article>
+        `;
+      }
+
+      async function loadTrails(query = "") {
+        const url = query ? `/trails?q=${encodeURIComponent(query)}` : "/trails";
+        const response = await fetch(url);
+        const data = await response.json();
+        const items = data.items || [];
+        grid.innerHTML = items.slice(0, 24).map(cardTemplate).join("");
+      }
+
+      function openDrawer(id) {
+        activeTrailId = id;
+        drawerStatus.textContent = "";
+        drawerBody.innerHTML = "Loading...";
+        drawer.classList.add("active");
+        drawerOverlay.classList.add("active");
+        fetch(`/trails/${id}`)
+          .then((response) => response.json())
+          .then((trail) => {
+            drawerTitle.textContent = trail.name || "Trail details";
+            drawerLink.href = trail.url || "#";
+            drawerBody.innerHTML = `
+              <p><strong>Location:</strong> ${trail.city_name || "Unknown city"} • ${trail.area_name || "Unknown area"}</p>
+              <p><strong>Difficulty:</strong> ${trail.difficulty_category || "n/a"} (${trail.difficulty_rating || "n/a"})</p>
+              <p><strong>Length:</strong> ${trail.length_miles || "?"} miles</p>
+              <p><strong>Elevation gain:</strong> ${trail.elevation_gain_ft || "?"} ft</p>
+              <p><strong>Steepness:</strong> ${trail.steepness_ftmi || "?"} ft/mi</p>
+              <p><strong>Rating:</strong> ${trail.avg_rating ? trail.avg_rating.toFixed(1) : "n/a"}</p>
+              <p><strong>Reviews:</strong> ${trail.num_reviews || 0}</p>
+              <p><strong>Route type:</strong> ${trail.route_type || "n/a"}</p>
+              <p><strong>Activities:</strong> ${(trail.activities || []).join(", ") || "n/a"}</p>
+              <div class="drawer-tags">
+                ${(trail.features || []).slice(0, 10).map((tag) => `<span>${tag}</span>`).join("")}
+              </div>
+            `;
+          })
+          .catch(() => {
+            drawerBody.textContent = "Unable to load trail details.";
+          });
+      }
+
+      function closeDrawer() {
+        drawer.classList.remove("active");
+        drawerOverlay.classList.remove("active");
+      }
+
+      searchInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          loadTrails(searchInput.value.trim());
+        }
+      });
+
+      drawerOverlay.addEventListener("click", closeDrawer);
+      drawerClose.addEventListener("click", closeDrawer);
+      window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") closeDrawer();
+      });
+
+      completeTrailButton.addEventListener("click", async () => {
+        if (!activeTrailId) return;
+        drawerStatus.textContent = "Saving completion...";
+        try {
+          const response = await fetch(`/trails/${activeTrailId}/complete`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: "demo" }),
+          });
+          if (!response.ok) throw new Error("Request failed");
+          drawerStatus.textContent = "Saved. Trail marked complete.";
+        } catch (error) {
+          drawerStatus.textContent = "Unable to save completion.";
+        }
+      });
+
+      loadTrails();
+    </script>
+  </body>
+</html>
