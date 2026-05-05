@@ -207,6 +207,121 @@
         font-size: 13px;
       }
 
+      .user-zone {
+        padding: 40px 6vw 20px;
+        display: grid;
+        gap: 20px;
+      }
+
+      .user-zone h2 {
+        margin: 0;
+        font-family: "VT323", monospace;
+        font-size: 32px;
+      }
+
+      .user-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .user-card {
+        border: 2px solid var(--black);
+        background: #fff6a0;
+        padding: 16px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 10px;
+      }
+
+      .user-card h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .user-card h4 {
+        margin: 6px 0 0;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .user-card label {
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+
+      .user-card input,
+      .user-card textarea {
+        padding: 8px 10px;
+        border: 2px solid var(--black);
+        background: #fff8b0;
+        font-family: inherit;
+        box-shadow: var(--shadow);
+      }
+
+      .user-card textarea {
+        min-height: 80px;
+      }
+
+      .status-pill {
+        font-size: 12px;
+        min-height: 18px;
+      }
+
+      .progress-list {
+        display: grid;
+        gap: 6px;
+        font-size: 13px;
+      }
+
+      .about-zone {
+        padding: 40px 6vw 60px;
+        display: grid;
+        gap: 20px;
+      }
+
+      .about-zone h2 {
+        margin: 0;
+        font-family: "VT323", monospace;
+        font-size: 32px;
+      }
+
+      .about-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .about-card {
+        border: 2px solid var(--black);
+        background: #fff6a0;
+        padding: 16px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 12px;
+      }
+
+      .about-card h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
+      .chart-wrap {
+        position: relative;
+        height: 260px;
+      }
+
+      .map-frame {
+        border: 2px solid var(--black);
+        width: 100%;
+        min-height: 360px;
+        box-shadow: var(--shadow);
+        background: #fff8b0;
+      }
+
       .trail-tags {
         margin-top: 10px;
         display: flex;
@@ -437,10 +552,8 @@
         <div class="logo">highhike</div>
         <nav>
           <a href="#">Trails</a>
-          <a href="#">Create Route</a>
-          <a href="#">Achievements</a>
-          <a href="#">About</a>
-          <a href="#">Blog</a>
+          <a href="#user">User</a>
+          <a href="#about">About</a>
         </nav>
         <div class="dev-link">
           <a href="#">Developers</a>
@@ -461,9 +574,8 @@
           </h1>
           <p>
             <span class="highlight">Search</span> and filter thousands of California trails, then
-            add your own routes with distance and elevation to get a difficulty estimate you can
-            confirm. Highhike keeps the data clean, fast, and open so every hiker can find the
-            right path.
+            add or edit trail records while tracking your own completions. Highhike keeps the data
+            clean, fast, and open so every hiker can find the right path.
           </p>
           <div class="actions">
             <a class="btn" href="#trails">Explore Trails</a>
@@ -484,6 +596,87 @@
         <div id="trail-grid" class="trail-grid"></div>
       </section>
 
+      <section class="user-zone" id="user">
+        <h2>User control</h2>
+        <div class="user-grid">
+          <div class="user-card">
+            <h3>Add a trail</h3>
+            <label for="add-name">Name *</label>
+            <input id="add-name" type="text" placeholder="Trail name" />
+            <label for="add-length">Length (miles) *</label>
+            <input id="add-length" type="number" step="0.01" placeholder="8.4" />
+            <label for="add-elevation">Elevation gain (ft) *</label>
+            <input id="add-elevation" type="number" step="1" placeholder="1250" />
+            <label for="add-area">Area name</label>
+            <input id="add-area" type="text" placeholder="Angeles National Forest" />
+            <label for="add-city">City name</label>
+            <input id="add-city" type="text" placeholder="Altadena" />
+            <label for="add-route">Route type</label>
+            <input id="add-route" type="text" placeholder="Out & back" />
+            <label for="add-url">URL</label>
+            <input id="add-url" type="url" placeholder="https://" />
+            <button class="btn" id="add-trail">Add trail</button>
+            <div class="status-pill" id="add-status"></div>
+          </div>
+
+          <div class="user-card">
+            <h3>Edit a trail</h3>
+            <label for="edit-id">Trail ID *</label>
+            <input id="edit-id" type="number" step="1" placeholder="123" />
+            <label for="edit-name">Name</label>
+            <input id="edit-name" type="text" placeholder="Optional" />
+            <label for="edit-length">Length (miles)</label>
+            <input id="edit-length" type="number" step="0.01" placeholder="Optional" />
+            <label for="edit-elevation">Elevation gain (ft)</label>
+            <input id="edit-elevation" type="number" step="1" placeholder="Optional" />
+            <label for="edit-area">Area name</label>
+            <input id="edit-area" type="text" placeholder="Optional" />
+            <label for="edit-city">City name</label>
+            <input id="edit-city" type="text" placeholder="Optional" />
+            <label for="edit-route">Route type</label>
+            <input id="edit-route" type="text" placeholder="Optional" />
+            <label for="edit-url">URL</label>
+            <input id="edit-url" type="url" placeholder="Optional" />
+            <button class="btn" id="edit-trail">Save changes</button>
+            <div class="status-pill" id="edit-status"></div>
+          </div>
+
+          <div class="user-card">
+            <h3>Progress</h3>
+            <div class="progress-list" id="progress-summary">
+              <div>Trails completed: --</div>
+              <div>Miles completed: --</div>
+              <div>Elevation gain: --</div>
+            </div>
+            <h4>Breakdown</h4>
+            <div class="progress-list" id="progress-breakdown">Loading...</div>
+            <button class="btn" id="refresh-progress">Refresh progress</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="about-zone" id="about">
+        <h2>About the data</h2>
+        <div class="about-grid">
+          <div class="about-card">
+            <h3>Activity proportions</h3>
+            <div class="chart-wrap">
+              <canvas id="activity-chart" aria-label="Activity proportions"></canvas>
+            </div>
+          </div>
+          <div class="about-card">
+            <h3>Feature proportions</h3>
+            <div class="chart-wrap">
+              <canvas id="feature-chart" aria-label="Feature proportions"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="about-card">
+          <h3>California trail map</h3>
+          <iframe class="map-frame" src="/map" title="California trail map"></iframe>
+        </div>
+      </section>
+
       <footer>OPEN SOURCE</footer>
     </div>
     <div class="drawer-overlay" id="drawer-overlay"></div>
@@ -499,6 +692,7 @@
         <div class="status-text" id="drawer-status"></div>
       </div>
     </aside>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script>
       const grid = document.getElementById("trail-grid");
       const searchInput = document.getElementById("trail-search");
@@ -510,7 +704,19 @@
       const drawerLink = document.getElementById("drawer-link");
       const drawerStatus = document.getElementById("drawer-status");
       const completeTrailButton = document.getElementById("complete-trail");
+      const addTrailButton = document.getElementById("add-trail");
+      const editTrailButton = document.getElementById("edit-trail");
+      const addStatus = document.getElementById("add-status");
+      const editStatus = document.getElementById("edit-status");
+      const progressSummary = document.getElementById("progress-summary");
+      const progressBreakdown = document.getElementById("progress-breakdown");
+      const refreshProgressButton = document.getElementById("refresh-progress");
+      const activityChartEl = document.getElementById("activity-chart");
+      const featureChartEl = document.getElementById("feature-chart");
+      const userId = "demo";
       let activeTrailId = null;
+      let activityChart = null;
+      let featureChart = null;
 
       function cardTemplate(trail) {
         const tags = (trail.features || []).slice(0, 4);
@@ -591,16 +797,188 @@
           const response = await fetch(`/trails/${activeTrailId}/complete`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ user_id: "demo" }),
+            body: JSON.stringify({ user_id: userId }),
           });
           if (!response.ok) throw new Error("Request failed");
           drawerStatus.textContent = "Saved. Trail marked complete.";
+          await loadProgress();
         } catch (error) {
           drawerStatus.textContent = "Unable to save completion.";
         }
       });
 
+      function buildPayload(fields) {
+        return Object.fromEntries(
+          Object.entries(fields).filter(([, value]) => value !== "" && value !== null)
+        );
+      }
+
+      addTrailButton.addEventListener("click", async () => {
+        addStatus.textContent = "Saving trail...";
+        const payload = buildPayload({
+          name: document.getElementById("add-name").value.trim(),
+          length_miles: document.getElementById("add-length").value,
+          elevation_gain_ft: document.getElementById("add-elevation").value,
+          area_name: document.getElementById("add-area").value.trim(),
+          city_name: document.getElementById("add-city").value.trim(),
+          route_type: document.getElementById("add-route").value.trim(),
+          url: document.getElementById("add-url").value.trim(),
+        });
+
+        try {
+          const response = await fetch("/trails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) throw new Error("Request failed");
+          const data = await response.json();
+          addStatus.textContent = `Added trail #${data.trail.id}.`;
+          await loadTrails(searchInput.value.trim());
+        } catch (error) {
+          addStatus.textContent = "Unable to add trail.";
+        }
+      });
+
+      editTrailButton.addEventListener("click", async () => {
+        editStatus.textContent = "Saving updates...";
+        const trailId = document.getElementById("edit-id").value;
+        if (!trailId) {
+          editStatus.textContent = "Trail ID required.";
+          return;
+        }
+        const payload = buildPayload({
+          name: document.getElementById("edit-name").value.trim(),
+          length_miles: document.getElementById("edit-length").value,
+          elevation_gain_ft: document.getElementById("edit-elevation").value,
+          area_name: document.getElementById("edit-area").value.trim(),
+          city_name: document.getElementById("edit-city").value.trim(),
+          route_type: document.getElementById("edit-route").value.trim(),
+          url: document.getElementById("edit-url").value.trim(),
+        });
+
+        try {
+          const response = await fetch(`/trails/${trailId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) throw new Error("Request failed");
+          const data = await response.json();
+          editStatus.textContent = `Updated trail #${data.trail.id}.`;
+          await loadTrails(searchInput.value.trim());
+        } catch (error) {
+          editStatus.textContent = "Unable to update trail.";
+        }
+      });
+
+      function renderBreakdown(title, values) {
+        const entries = Object.entries(values || {});
+        if (!entries.length) return `${title}: none yet`;
+        return `${title}: ${entries.map(([key, value]) => `${key} (${value})`).join(", ")}`;
+      }
+
+      async function loadProgress() {
+        progressBreakdown.textContent = "Loading...";
+        try {
+          const [achievementRes, graphRes] = await Promise.all([
+            fetch(`/users/${userId}/achievements`),
+            fetch(`/users/${userId}/graphs`),
+          ]);
+          const achievementData = await achievementRes.json();
+          const graphData = await graphRes.json();
+
+          progressSummary.innerHTML = `
+            <div>Trails completed: ${achievementData.trails_completed ?? 0}</div>
+            <div>Miles completed: ${achievementData.miles_completed ?? 0}</div>
+            <div>Elevation gain: ${achievementData.elevation_gain_ft ?? 0}</div>
+          `;
+          progressBreakdown.innerHTML = `
+            <div>${renderBreakdown("Difficulty", graphData.difficulty_pie)}</div>
+            <div>${renderBreakdown("Route type", graphData.route_type_pie)}</div>
+            <div>${renderBreakdown("Area category", graphData.area_category_pie)}</div>
+          `;
+        } catch (error) {
+          progressBreakdown.textContent = "";
+        }
+      }
+
+      function buildPieChart(canvas, data, title) {
+        // Tiny helper so both pies stay consistent.
+        const labels = Object.keys(data);
+        const values = Object.values(data);
+        return new Chart(canvas, {
+          type: "pie",
+          data: {
+            labels,
+            datasets: [
+              {
+                data: values,
+                backgroundColor: [
+                  "#00f0ff",
+                  "#ffd800",
+                  "#ff7f50",
+                  "#2ecc71",
+                  "#ff6b6b",
+                  "#8e44ad",
+                  "#34495e",
+                  "#f1c40f",
+                  "#1abc9c",
+                ],
+                borderColor: "#111111",
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  color: "#111111",
+                  font: { family: "Space Mono", size: 11 },
+                },
+              },
+              title: {
+                display: false,
+                text: title,
+              },
+            },
+          },
+        });
+      }
+
+      async function loadAboutStats() {
+        // Pull live counts from the server and paint the charts.
+        try {
+          const response = await fetch("/about/stats");
+          const data = await response.json();
+
+          if (activityChart) activityChart.destroy();
+          if (featureChart) featureChart.destroy();
+
+          activityChart = buildPieChart(
+            activityChartEl,
+            data.activities || {},
+            "Activity proportions"
+          );
+          featureChart = buildPieChart(
+            featureChartEl,
+            data.features || {},
+            "Feature proportions"
+          );
+        } catch (error) {
+          // Keep it simple if the API is down.
+          activityChartEl.replaceWith("Unable to load activity chart.");
+          featureChartEl.replaceWith("Unable to load feature chart.");
+        }
+      }
+
+      refreshProgressButton.addEventListener("click", loadProgress);
+
       loadTrails();
+      loadProgress();
+      loadAboutStats();
     </script>
   </body>
 </html>

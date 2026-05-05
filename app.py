@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, abort, jsonify, render_template, request, send_file
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import func
 
@@ -11,6 +12,7 @@ db = SQLAlchemy()
 
 
 def estimate_difficulty_category(length_miles: float, elevation_gain_ft: float) -> str:
+    # Lightweight heuristic so new trails get a sensible difficulty label.
     score = (length_miles * elevation_gain_ft * 2) ** 0.5
     if score < 50:
         return "easy"
@@ -23,12 +25,42 @@ def estimate_difficulty_category(length_miles: float, elevation_gain_ft: float) 
     return "very strenuous"
 
 
+def _coerce_float(value: object) -> float | None:
+    # Accept strings from JSON and fail softly on bad input.
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _coerce_int(value: object) -> int | None:
+    # Same idea as _coerce_float, but for integer fields.
+    if value is None:
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_list(value: object) -> list[str]:
+    # The DB stores list fields as pickles; keep it robust and return a clean list.
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value if item]
+    return []
+
+
 def create_app() -> Flask:
     app = Flask(__name__)
     base_dir = Path(__file__).resolve().parent
     trails_db_path = base_dir / "trail_schema.db"
     users_db_path = base_dir / "users_trails_schema.db"
 
+    # Two DBs: one for the trail catalog, one for user progress.
     app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{trails_db_path}"
     app.config["SQLALCHEMY_BINDS"] = {"users": f"sqlite:///{users_db_path}"}
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -99,6 +131,7 @@ def create_app() -> Flask:
         created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def trail_to_dict(trail: Trail) -> dict:
+        # Keep API output consistent and predictable.
         return {
             "id": trail.id,
             "name": trail.name,
@@ -123,6 +156,7 @@ def create_app() -> Flask:
 
     @app.get("/trails")
     def list_trails():
+        # Flexible list endpoint for search + filters.
         query = Trail.query
         q = request.args.get("q")
         if q:
@@ -169,60 +203,115 @@ def create_app() -> Flask:
 
     @app.get("/")
     def index():
+        # Single-page UI lives in templates/index.html.
         return render_template("index.html")
 
     @app.get("/trails/<int:trail_id>")
     def get_trail(trail_id: int):
+        # Detail view for the drawer.
         trail = Trail.query.get_or_404(trail_id)
         return jsonify(trail_to_dict(trail))
 
-    @app.post("/routes")
-    def create_route():
+    @app.post("/trails")
+    def create_trail():
+        # Admin-style trail creation.
         payload = request.get_json(silent=True) or {}
         name = payload.get("name")
-        distance_miles = payload.get("distance_miles")
-        elevation_gain_ft = payload.get("elevation_gain_ft")
+        length_miles = _coerce_float(payload.get("length_miles"))
+        elevation_gain_ft = _coerce_float(payload.get("elevation_gain_ft"))
 
-        if not name or distance_miles is None or elevation_gain_ft is None:
-            return jsonify({"error": "name, distance_miles, elevation_gain_ft required"}), 400
+        if not name or length_miles is None or elevation_gain_ft is None:
+            return jsonify({"error": "name, length_miles, elevation_gain_ft required"}), 400
 
-        distance_miles = float(distance_miles)
-        elevation_gain_ft = float(elevation_gain_ft)
-        steepness_ftmi = elevation_gain_ft / max(distance_miles, 0.01)
-        difficulty_category = estimate_difficulty_category(distance_miles, elevation_gain_ft)
+        steepness_ftmi = elevation_gain_ft / max(length_miles, 0.01)
+        difficulty_category = estimate_difficulty_category(length_miles, elevation_gain_ft)
 
         trail = Trail(
             name=name,
-            length_miles=distance_miles,
+            difficulty_rating=_coerce_int(payload.get("difficulty_rating")),
+            route_type=payload.get("route_type"),
+            visitor_usage=_coerce_int(payload.get("visitor_usage")),
+            avg_rating=_coerce_float(payload.get("avg_rating")),
+            area_name=payload.get("area_name"),
+            city_name=payload.get("city_name"),
+            features=payload.get("features"),
+            activities=payload.get("activities"),
+            num_reviews=_coerce_int(payload.get("num_reviews")),
+            latitude=_coerce_float(payload.get("latitude")),
+            longitude=_coerce_float(payload.get("longitude")),
+            length_miles=length_miles,
             elevation_gain_ft=elevation_gain_ft,
             steepness_ftmi=steepness_ftmi,
             difficulty_category=difficulty_category,
-            area_name=payload.get("area_name"),
-            city_name=payload.get("city_name"),
-            route_type=payload.get("route_type"),
             area_category=payload.get("area_category"),
             url=payload.get("url"),
         )
         db.session.add(trail)
         db.session.commit()
 
-        feedback = UserDifficultyFeedback(
-            user_id=payload.get("user_id"),
-            trail_id=trail.id,
-            distance_miles=distance_miles,
-            elevation_gain_ft=elevation_gain_ft,
-            difficulty_estimate=difficulty_category,
-            difficulty_feedback=payload.get("difficulty_feedback"),
-            feedback_notes=payload.get("feedback_notes"),
-            terrain_type=payload.get("terrain_type"),
-        )
-        db.session.add(feedback)
-        db.session.commit()
+        return jsonify({"trail": trail_to_dict(trail)}), 201
 
-        return jsonify({"trail": trail_to_dict(trail), "feedback_id": feedback.id}), 201
+    @app.patch("/trails/<int:trail_id>")
+    def update_trail(trail_id: int):
+        # Partial updates; only fields present in the payload are touched.
+        payload = request.get_json(silent=True) or {}
+        trail = Trail.query.get_or_404(trail_id)
+
+        if "name" in payload:
+            trail.name = payload.get("name")
+        if "difficulty_rating" in payload:
+            trail.difficulty_rating = _coerce_int(payload.get("difficulty_rating"))
+        if "route_type" in payload:
+            trail.route_type = payload.get("route_type")
+        if "visitor_usage" in payload:
+            trail.visitor_usage = _coerce_int(payload.get("visitor_usage"))
+        if "avg_rating" in payload:
+            trail.avg_rating = _coerce_float(payload.get("avg_rating"))
+        if "area_name" in payload:
+            trail.area_name = payload.get("area_name")
+        if "city_name" in payload:
+            trail.city_name = payload.get("city_name")
+        if "features" in payload:
+            trail.features = payload.get("features")
+        if "activities" in payload:
+            trail.activities = payload.get("activities")
+        if "num_reviews" in payload:
+            trail.num_reviews = _coerce_int(payload.get("num_reviews"))
+        if "latitude" in payload:
+            trail.latitude = _coerce_float(payload.get("latitude"))
+        if "longitude" in payload:
+            trail.longitude = _coerce_float(payload.get("longitude"))
+        if "area_category" in payload:
+            trail.area_category = payload.get("area_category")
+        if "url" in payload:
+            trail.url = payload.get("url")
+
+        length_miles = (
+            _coerce_float(payload.get("length_miles"))
+            if "length_miles" in payload
+            else trail.length_miles
+        )
+        elevation_gain_ft = (
+            _coerce_float(payload.get("elevation_gain_ft"))
+            if "elevation_gain_ft" in payload
+            else trail.elevation_gain_ft
+        )
+
+        trail.length_miles = length_miles
+        trail.elevation_gain_ft = elevation_gain_ft
+        if length_miles is not None and elevation_gain_ft is not None:
+            # Keep derived fields in sync when core metrics change.
+            trail.steepness_ftmi = elevation_gain_ft / max(length_miles, 0.01)
+            trail.difficulty_category = estimate_difficulty_category(
+                length_miles, elevation_gain_ft
+            )
+
+        db.session.commit()
+        return jsonify({"trail": trail_to_dict(trail)})
 
     @app.post("/trails/<int:trail_id>/complete")
     def complete_trail(trail_id: int):
+        # Record a user's completion so progress/achievements can update.
         payload = request.get_json(silent=True) or {}
         user_id = payload.get("user_id")
         if not user_id:
@@ -247,6 +336,7 @@ def create_app() -> Flask:
 
     @app.get("/users/<string:user_id>/achievements")
     def user_achievements(user_id: str):
+        # Computed on the fly so it always reflects latest progress.
         trails_done = (
             UserTrailProgress.query.filter_by(user_id=user_id)
             .with_entities(func.count(UserTrailProgress.id))
@@ -293,6 +383,7 @@ def create_app() -> Flask:
 
     @app.get("/users/<string:user_id>/graphs")
     def user_graphs(user_id: str):
+        # Simple breakdowns for the progress widgets.
         progress = UserTrailProgress.query.filter_by(user_id=user_id).all()
         trail_ids = [p.trail_id for p in progress]
         trails = Trail.query.filter(Trail.id.in_(trail_ids)).all() if trail_ids else []
@@ -314,6 +405,43 @@ def create_app() -> Flask:
                 "area_category_pie": by_area,
             }
         )
+
+    @app.get("/about/stats")
+    def about_stats():
+        # Simple rollups for the About page charts.
+        trails = Trail.query.with_entities(Trail.features, Trail.activities).all()
+        activity_counts: Counter[str] = Counter()
+        feature_counts: Counter[str] = Counter()
+
+        for features, activities in trails:
+            activity_counts.update(_normalize_list(activities))
+            feature_counts.update(_normalize_list(features))
+
+        def bucket_counts(counter: Counter[str], min_count: int) -> dict[str, int]:
+            # Keep charts readable by bucketing the long tail into "Other".
+            major = {key: count for key, count in counter.items() if count >= min_count}
+            other = sum(count for key, count in counter.items() if count < min_count)
+            if other:
+                major["Other"] = other
+            return dict(sorted(major.items(), key=lambda item: item[1], reverse=True))
+
+        return jsonify(
+            {
+                "activities": bucket_counts(activity_counts, min_count=500),
+                "features": bucket_counts(feature_counts, min_count=600),
+            }
+        )
+
+    @app.get("/map")
+    def trail_map():
+        # Serve a pre-generated Folium map (regen when the dataset changes).
+        map_path = Path(__file__).resolve().parent / "trail_map.html"
+        if not map_path.exists():
+            return (
+                "<h1>Trail map not generated.</h1><p>Run the map generation script to create trail_map.html.</p>",
+                404,
+            )
+        return send_file(map_path)
 
     with app.app_context():
         db.create_all()
