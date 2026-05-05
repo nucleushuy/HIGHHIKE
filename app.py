@@ -4,8 +4,11 @@ from collections import Counter
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 from flask import Flask, abort, jsonify, render_template, request, send_file
 from flask_sqlalchemy import SQLAlchemy
+from sklearn.neighbors import BallTree, NearestNeighbors
+from sklearn.preprocessing import StandardScaler
 from sqlalchemy import func
 
 db = SQLAlchemy()
@@ -52,6 +55,26 @@ def _normalize_list(value: object) -> list[str]:
     if isinstance(value, (list, tuple, set)):
         return [str(item) for item in value if item]
     return []
+
+
+def _convert_difficulty(value: object) -> int:
+    if value is None:
+        return 3
+    text = str(value).strip().lower()
+    if text == "easy":
+        return 1
+    if text == "moderate":
+        return 2
+    if text == "moderately strenuous":
+        return 3
+    if text == "strenuous":
+        return 4
+    if text == "very strenuous":
+        return 5
+    try:
+        return int(text)
+    except ValueError:
+        return 3
 
 
 def create_app() -> Flask:
@@ -153,6 +176,74 @@ def create_app() -> Flask:
             "area_category": trail.area_category,
             "url": trail.url,
         }
+
+    def _build_trail_matrix() -> np.ndarray:
+        # Build a compact numeric matrix for the recommender.
+        trails = Trail.query.all()
+        rows: list[list[object]] = []
+        for trail in trails:
+            if trail.length_miles is None:
+                continue
+            latitude = trail.latitude if trail.latitude is not None else np.nan
+            longitude = trail.longitude if trail.longitude is not None else np.nan
+            rows.append(
+                [
+                    trail.id,
+                    trail.length_miles,
+                    _convert_difficulty(trail.difficulty_category),
+                    latitude,
+                    longitude,
+                ]
+            )
+        return np.array(rows, dtype=object)
+
+    def _filter_location(trails_arr: np.ndarray, query: list[float], max_miles: float) -> np.ndarray:
+        coords = trails_arr[:, 3:5].astype(float)
+        if np.isnan(coords).any():
+            valid = ~np.isnan(coords).any(axis=1)
+            trails_arr = trails_arr[valid]
+            coords = coords[valid]
+        trails_radians = np.radians(coords)
+        query_radian = np.radians(np.array([query[2:4]], dtype=float).reshape(1, -1))
+        tree = BallTree(trails_radians, metric="haversine")
+        miles_radian = max_miles / 3958.8
+        indices = tree.query_radius(query_radian, r=miles_radian)[0]
+        return trails_arr[indices]
+
+    def _recommend_trails(
+        query: list[float],
+        limit: int,
+        max_miles: float,
+    ) -> list[int]:
+        # Lightweight KNN pass with optional location filter.
+        trails_arr = _build_trail_matrix()
+        if trails_arr.size == 0:
+            return []
+
+        if query[2] is not None and query[3] is not None:
+            trails_arr = _filter_location(trails_arr, query, max_miles)
+            if trails_arr.size == 0:
+                return []
+
+        X = trails_arr[:, 1:3].astype(float)
+        scaler = StandardScaler()
+        X_scaled = scaler.fit_transform(X)
+
+        weights = np.array([1.0, 2.5])
+        X_weighted = X_scaled * weights
+
+        neighbor_count = min(limit, len(X_weighted))
+        neighbors = NearestNeighbors(n_neighbors=neighbor_count, metric="euclidean").fit(X_weighted)
+
+        query_scaled = scaler.transform(np.array([query[0:2]], dtype=float))
+        query_weighted = query_scaled * weights
+        distances, indices = neighbors.kneighbors(query_weighted)
+
+        if indices.size == 0:
+            return []
+
+        selected = trails_arr[indices[0]]
+        return [int(row[0]) for row in selected]
 
     @app.get("/trails")
     def list_trails():
@@ -333,6 +424,29 @@ def create_app() -> Flask:
         db.session.add(progress)
         db.session.commit()
         return jsonify({"progress_id": progress.id}), 201
+
+    @app.post("/recommendations")
+    def recommendations():
+        payload = request.get_json(silent=True) or {}
+        length_miles = _coerce_float(payload.get("distance_miles"))
+        difficulty = _convert_difficulty(payload.get("difficulty_category"))
+        latitude = _coerce_float(payload.get("latitude"))
+        longitude = _coerce_float(payload.get("longitude"))
+        max_miles = _coerce_float(payload.get("max_miles")) or 50
+        limit = _coerce_int(payload.get("limit")) or 7
+
+        if length_miles is None:
+            return jsonify({"error": "distance_miles required"}), 400
+
+        query = [length_miles, difficulty, latitude, longitude]
+        trail_ids = _recommend_trails(query, limit=limit, max_miles=max_miles)
+        if not trail_ids:
+            return jsonify({"count": 0, "items": []})
+
+        trails = Trail.query.filter(Trail.id.in_(trail_ids)).all()
+        trail_by_id = {trail.id: trail for trail in trails}
+        ordered = [trail_by_id[trail_id] for trail_id in trail_ids if trail_id in trail_by_id]
+        return jsonify({"count": len(ordered), "items": [trail_to_dict(t) for t in ordered]})
 
     @app.get("/users/<string:user_id>/achievements")
     def user_achievements(user_id: str):

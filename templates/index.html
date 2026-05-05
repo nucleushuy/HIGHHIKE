@@ -322,6 +322,38 @@
         background: #fff8b0;
       }
 
+      .recommend-zone {
+        padding: 40px 6vw 20px;
+        display: grid;
+        gap: 20px;
+      }
+
+      .recommend-zone h2 {
+        margin: 0;
+        font-family: "VT323", monospace;
+        font-size: 32px;
+      }
+
+      .recommend-grid {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+
+      .recommend-card {
+        border: 2px solid var(--black);
+        background: #fff6a0;
+        padding: 16px;
+        box-shadow: var(--shadow);
+        display: grid;
+        gap: 10px;
+      }
+
+      .recommend-card h3 {
+        margin: 0;
+        font-size: 18px;
+      }
+
       .trail-tags {
         margin-top: 10px;
         display: flex;
@@ -551,8 +583,9 @@
       <header>
         <div class="logo">highhike</div>
         <nav>
-          <a href="#">Trails</a>
+          <a href="#trails">Trails</a>
           <a href="#user">User</a>
+          <a href="#recommendations">Recommendations</a>
           <a href="#about">About</a>
         </nav>
         <div class="dev-link">
@@ -655,6 +688,35 @@
         </div>
       </section>
 
+      <section class="recommend-zone" id="recommendations">
+        <h2>Recommendations</h2>
+        <div class="recommend-grid">
+          <div class="recommend-card">
+            <h3>Find similar trails</h3>
+            <label for="rec-distance">Target distance (miles) *</label>
+            <input id="rec-distance" type="number" step="0.1" placeholder="6.5" />
+            <label for="rec-difficulty">Difficulty</label>
+            <select id="rec-difficulty">
+              <option value="moderate">Moderate</option>
+              <option value="easy">Easy</option>
+              <option value="moderately strenuous">Moderately strenuous</option>
+              <option value="strenuous">Strenuous</option>
+              <option value="very strenuous">Very strenuous</option>
+            </select>
+            <label for="rec-lat">Latitude (optional)</label>
+            <input id="rec-lat" type="number" step="0.0001" placeholder="37.3382" />
+            <label for="rec-lon">Longitude (optional)</label>
+            <input id="rec-lon" type="number" step="0.0001" placeholder="-121.8863" />
+            <button class="btn" id="rec-submit">Get recommendations</button>
+            <div class="status-pill" id="rec-status"></div>
+          </div>
+          <div class="recommend-card">
+            <h3>Results</h3>
+            <div id="rec-results" class="trail-grid"></div>
+          </div>
+        </div>
+      </section>
+
       <section class="about-zone" id="about">
         <h2>About the data</h2>
         <div class="about-grid">
@@ -704,6 +766,13 @@
       const drawerLink = document.getElementById("drawer-link");
       const drawerStatus = document.getElementById("drawer-status");
       const completeTrailButton = document.getElementById("complete-trail");
+      const recSubmitButton = document.getElementById("rec-submit");
+      const recStatus = document.getElementById("rec-status");
+      const recResults = document.getElementById("rec-results");
+      const recDistance = document.getElementById("rec-distance");
+      const recDifficulty = document.getElementById("rec-difficulty");
+      const recLat = document.getElementById("rec-lat");
+      const recLon = document.getElementById("rec-lon");
       const addTrailButton = document.getElementById("add-trail");
       const editTrailButton = document.getElementById("edit-trail");
       const addStatus = document.getElementById("add-status");
@@ -903,6 +972,42 @@
         }
       }
 
+      async function loadRecommendations() {
+        recStatus.textContent = "Finding trails...";
+        const distanceValue = recDistance.value;
+        if (!distanceValue) {
+          recStatus.textContent = "Distance is required.";
+          return;
+        }
+
+        const payload = buildPayload({
+          distance_miles: distanceValue,
+          difficulty_category: recDifficulty.value,
+          latitude: recLat.value,
+          longitude: recLon.value,
+        });
+
+        try {
+          const response = await fetch("/recommendations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (!response.ok) throw new Error("Request failed");
+          const data = await response.json();
+          const items = data.items || [];
+          if (!items.length) {
+            recResults.innerHTML = "";
+            recStatus.textContent = "No matches yet. Try a new distance or add a location.";
+            return;
+          }
+          recStatus.textContent = `Found ${items.length} trails.`;
+          recResults.innerHTML = items.map(cardTemplate).join("");
+        } catch (error) {
+          recStatus.textContent = "Unable to load recommendations.";
+        }
+      }
+
       function buildPieChart(canvas, data, title) {
         // Tiny helper so both pies stay consistent.
         const labels = Object.keys(data);
@@ -975,6 +1080,7 @@
       }
 
       refreshProgressButton.addEventListener("click", loadProgress);
+      recSubmitButton.addEventListener("click", loadRecommendations);
 
       loadTrails();
       loadProgress();
